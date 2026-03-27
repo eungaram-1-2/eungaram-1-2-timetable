@@ -584,7 +584,7 @@
             }
         }
 
-        /* 방문자 카운터 */
+        /* 방문자 카운터 (비활성화)
         .visitor-wrapper {
             background-color: var(--bg-card);
             border-radius: 24px;
@@ -626,6 +626,7 @@
             .visitor-wrapper { gap: 24px; padding: 20px 16px; }
             .visitor-stat-value { font-size: 26px; }
         }
+        */
 
         @media (max-width: 480px) {
             body {
@@ -795,6 +796,7 @@
         </div>
     </div>
 
+    <!-- 방문자 통계 (비활성화)
     <div class="header-title" style="margin-top: 40px;">
         <span>👥</span>
         <h1>방문자 통계</h1>
@@ -816,6 +818,7 @@
             <div class="visitor-stat-value" id="visitorMonth">—</div>
         </div>
     </div>
+    -->
 
     <script>
         // 다크모드 토글 기능
@@ -1136,7 +1139,7 @@
             return { kcal, items };
         }
 
-        // 방문자 카운터
+        /* 방문자 카운터 (비활성화)
         async function loadVisitorCounts() {
             const now = new Date();
             const yyyy = now.getFullYear();
@@ -1195,6 +1198,7 @@
             }
         }
         loadVisitorCounts();
+        */
 
         function renderWeekLunch(doc, todayStr) {
             const weekEl = document.getElementById('weekLunchContent');
