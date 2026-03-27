@@ -584,6 +584,49 @@
             }
         }
 
+        /* 방문자 카운터 */
+        .visitor-wrapper {
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            padding: 24px 32px;
+            width: 100%;
+            max-width: 1050px;
+            box-shadow: var(--shadow-lg), var(--shadow-sm);
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        .visitor-stat {
+            text-align: center;
+        }
+        .visitor-stat-label {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .visitor-stat-value {
+            font-size: 34px;
+            font-weight: 800;
+            color: var(--purple-main);
+            letter-spacing: -1px;
+            font-variant-numeric: tabular-nums;
+        }
+        .visitor-divider {
+            width: 1px;
+            height: 44px;
+            background: var(--border-light);
+        }
+        @media (max-width: 768px) {
+            .visitor-wrapper { gap: 24px; padding: 20px 16px; }
+            .visitor-stat-value { font-size: 26px; }
+        }
+
         @media (max-width: 480px) {
             body {
                 padding: 16px 8px;
@@ -743,12 +786,34 @@
 
     <div class="header-title" style="margin-top: 40px;">
         <span>📅</span>
-        <h1>이번 주 급식</h1>
+        <h1 id="weekLunchTitle">이번 주 급식</h1>
     </div>
 
     <div class="week-lunch-wrapper">
         <div id="weekLunchContent">
             <span class="lunch-loading">급식 정보를 불러오는 중...</span>
+        </div>
+    </div>
+
+    <div class="header-title" style="margin-top: 40px;">
+        <span>👥</span>
+        <h1>방문자 통계</h1>
+    </div>
+
+    <div class="visitor-wrapper">
+        <div class="visitor-stat">
+            <div class="visitor-stat-label">오늘 방문자</div>
+            <div class="visitor-stat-value" id="visitorToday">—</div>
+        </div>
+        <div class="visitor-divider"></div>
+        <div class="visitor-stat">
+            <div class="visitor-stat-label">이번 주 방문자</div>
+            <div class="visitor-stat-value" id="visitorWeek">—</div>
+        </div>
+        <div class="visitor-divider"></div>
+        <div class="visitor-stat">
+            <div class="visitor-stat-label">이번 달 방문자</div>
+            <div class="visitor-stat-value" id="visitorMonth">—</div>
         </div>
     </div>
 
@@ -954,6 +1019,7 @@
 
             if (isWeekend) {
                 document.getElementById('lunchDate').textContent = `${yyyy}년 ${mm}월 ${dd}일 (다음 주 월요일)`;
+                document.getElementById('weekLunchTitle').textContent = '다음 주 급식';
             } else {
                 document.getElementById('lunchDate').textContent = `${yyyy}년 ${mm}월 ${dd}일`;
             }
@@ -1069,6 +1135,66 @@
                 : [];
             return { kcal, items };
         }
+
+        // 방문자 카운터
+        async function loadVisitorCounts() {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+
+            // ISO 주차 계산
+            function getISOWeek(d) {
+                const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                const day = date.getUTCDay() || 7;
+                date.setUTCDate(date.getUTCDate() + 4 - day);
+                const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+                return [date.getUTCFullYear(), Math.ceil((((date - yearStart) / 86400000) + 1) / 7)];
+            }
+            const [isoYear, isoWeek] = getISOWeek(now);
+            const ww = String(isoWeek).padStart(2, '0');
+
+            const namespace = 'eungaram-1-2';
+            const dayKey   = `today-${yyyy}${mm}${dd}`;
+            const weekKey  = `week-${isoYear}W${ww}`;
+            const monthKey = `month-${yyyy}${mm}`;
+            const base     = 'https://api.countapi.xyz';
+
+            // 같은 브라우저에서 오늘 이미 방문했으면 중복 카운트 방지
+            const visitedKey = `visited_${yyyy}${mm}${dd}`;
+            const alreadyVisited = localStorage.getItem(visitedKey);
+
+            const hit = async (key) => {
+                const r = await fetch(`${base}/hit/${namespace}/${key}`);
+                const data = await r.json();
+                return data.value || 0;
+            };
+            const get = async (key) => {
+                const r = await fetch(`${base}/get/${namespace}/${key}`);
+                const data = await r.json();
+                return data.value || 0;
+            };
+
+            try {
+                let dayVal, weekVal, monthVal;
+                if (!alreadyVisited) {
+                    [dayVal, weekVal, monthVal] = await Promise.all([
+                        hit(dayKey), hit(weekKey), hit(monthKey)
+                    ]);
+                    localStorage.setItem(visitedKey, '1');
+                } else {
+                    [dayVal, weekVal, monthVal] = await Promise.all([
+                        get(dayKey), get(weekKey), get(monthKey)
+                    ]);
+                }
+                document.getElementById('visitorToday').textContent  = dayVal.toLocaleString();
+                document.getElementById('visitorWeek').textContent   = weekVal.toLocaleString();
+                document.getElementById('visitorMonth').textContent  = monthVal.toLocaleString();
+            } catch (e) {
+                // 불러오기 실패 시 그냥 표시 안 함
+            }
+        }
+        loadVisitorCounts();
 
         function renderWeekLunch(doc, todayStr) {
             const weekEl = document.getElementById('weekLunchContent');
